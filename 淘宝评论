@@ -1,0 +1,59 @@
+import urllib.request
+import urllib.parse
+from bs4 import BeautifulSoup
+import json
+import re
+import jsonpath
+
+item_list = []
+
+def main():
+    url = 'https://rate.taobao.com/feedRateList.htm?auctionNumId=560882727023&userNumId=277891388&currentPageNum=1&pageSize=20'
+    heardes = {
+        'User-Agent': 'Mozilla / 5.0(Windows NT 10.0; WOW64) AppleWebKit / 537.36(KHTML, like Gecko) Chrome / 66.0.3359.170 Safari / 537.36'
+    }
+
+    request = urllib.request.Request(url=url,headers=heardes)
+    json_text = urllib.request.urlopen(request).read().decode()
+
+    # print(json_text)
+    # 将json两边的小括号去掉
+    json_text = re.sub(r'\(',"",json_text)
+    json_text = re.sub(r'\)',"",json_text)
+    # 将json格式字符串转化为python对象
+    obj = json.loads(json_text)
+    # print(obj)
+    #  抓取评论内容
+    # 首先取出comments这个列表
+    comments_list = obj["comments"]
+    # 遍历这个列表，依次提取每一条评论
+    for comment in comments_list:
+        # 用户头像
+        user = jsonpath.jsonpath(comment,'$..user')[0]
+        face = "http:" + user["avatar"]
+        # 用户名
+        name = user["nick"]
+        # 评论内容
+        ping_content = comment["content"]
+        # 评论时间
+        ping_time =  comment["date"]
+        # 手机信息
+        info = jsonpath.jsonpath(comment,"$..sku")[0]
+        # 将评论信息保存到字典中
+        item = {
+            "用户头像" : face,
+            "用户名" : name,
+            "评论" : ping_content,
+            "时间" : ping_time,
+            "信息" : info,
+        }
+
+        item_list.append(item)
+if __name__ == '__main__':
+    main()
+
+    string =json.dumps(item_list,ensure_ascii=False)
+
+    # 保存到文件中
+    with open("data/pinglun.txt" ,"w",encoding="utf8") as f:
+        f.write(string)
