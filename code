@@ -1,0 +1,81 @@
+from urllib import request
+from urllib import parse
+import json
+from bs4 import BeautifulSoup
+
+"""
+函数说明：从网上获取请求的数据
+参数：
+    location : 工作地点
+    key_word : 职位的名称
+    page : 页数
+"""
+
+def request_data(location,key_word,page):
+    handler = request.HTTPHandler()
+    opener = request.build_opener(handler)
+
+    base_url = "http://sou.zhaopin.com/jobs/searchresult.ashx?"
+
+    data = {
+        "jl" : location,
+        "kw" : key_word,
+        "p"  : page
+    }
+    data = parse.urlencode(data)
+    url = base_url + data
+
+    headers = {
+         'User-Agent':'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.170 Mobile Safari/537.36'
+    }
+
+    req  = request.Request(url=url,headers=headers)
+    response = opener.open(req)
+    return response
+
+"""
+函数说明：解析数据的函数
+参数：响应给客户端的数据
+"""
+def parse_data(response):
+    # 使用BeautifulSoup加载网页信息
+    soup = BeautifulSoup(response.read().decode("utf-8"),"lxml")
+
+    table_list = soup.select(".newlist_list > .newlist_list_content table")[1:]
+    # print(table_list)
+    data_list = []
+    for node in table_list:
+        # 公司名称
+        gsmc = node.select(".gsmc")[0].get_text()
+        # 职位月薪
+        zwyx = node.select(".zwyx")[0].get_text()
+        # 工作地点
+        gzdd = node.select(".gzdd")[0].get_text()
+
+        node_dic = {
+            "公司名称" : gsmc,
+            "职位月薪" : zwyx,
+            "工作地点" : gzdd,
+        }
+
+        data_list.append(node_dic)
+
+    return data_list
+
+"""
+函数名称：保存数据
+参数：保存的数据
+"""
+def save_data(data_list):
+    json.dump(data_list,open("data/zhilian.json","w",encoding="utf-8"),
+              ensure_ascii=False) # 是否以ascii方式编码
+
+
+if __name__ == "__main__" :
+    location = input("请输入工作地点：")
+    key_work = input("请输入职位名称：")
+    page = input("请输入查看页码：")
+
+    response = request_data(location,key_work,page)
+    data_list = parse_data(response)
+    save_data(data_list)
